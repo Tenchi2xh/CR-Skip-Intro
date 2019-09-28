@@ -1,10 +1,30 @@
 const metadataMarker = "    vilos.config.media = ";
 
+function inject(source) {
+    const script = document.createElement("script"),
+          firstScript = document.getElementsByTagName("script")[0];
+    script.textContent = source;
+    firstScript.parentNode.insertBefore(script, firstScript);
+    firstScript.parentNode.removeChild(script);
+}
+
+function saveAdBreaks() {
+    document.body.setAttribute("data-adBreaks", JSON.stringify(vilos.adService.adBreaks));
+}
+
 async function getTimestamps(episodeUrl) {
-    let html = await fetch("https://cors-anywhere.herokuapp.com/" + episodeUrl).then(response => response.text());
-    let metadataLine = html.split("\n").find(line => line.startsWith(metadataMarker));
-    let metadata = JSON.parse(metadataLine.slice(metadataMarker.length, -1));
-    let midrolls = metadata["ad_breaks"].filter(ad => ad["type"] === "midroll").map(ad => ad["offset"] / 1000);
+    let midrolls = [];
+    inject("(" + saveAdBreaks.toString() + ")()");
+    let playerAdBreaks = JSON.parse(document.body.getAttribute("data-adBreaks"));
+
+    if (Array.isArray(playerAdBreaks) && playerAdBreaks.length) {
+        midrolls = playerAdBreaks.filter(ad => ad["type"] === "midroll").map(ad => ad["offset"]);
+    } else {
+        let html = await fetch("https://cors-anywhere.herokuapp.com/" + episodeUrl).then(response => response.text());
+        let metadataLine = html.split("\n").find(line => line.startsWith(metadataMarker));
+        let metadata = JSON.parse(metadataLine.slice(metadataMarker.length, -1));
+        midrolls = metadata["ad_breaks"].filter(ad => ad["type"] === "midroll").map(ad => ad["offset"] / 1000);
+    }
     return midrolls;
 }
 
@@ -47,11 +67,16 @@ function addSkipButton(video, timestamp) {
 function init() {
     let video = document.getElementById("player_html5_api");
     let episodeUrl = document.referrer;
-    getTimestamps(episodeUrl)
-        .then(timestamps => {
-            let afterIntro = timestamps[0];
-            addSkipButton(video, afterIntro);
-        });
+    let done = false;
+    video.onplay = () => {
+        if (done) return;
+        done = true;
+        getTimestamps(episodeUrl)
+            .then(timestamps => {
+                let afterIntro = timestamps[0];
+                addSkipButton(video, afterIntro);
+            });
+    };
 }
 
 init();
