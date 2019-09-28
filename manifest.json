@@ -10,8 +10,9 @@
             ]
         }
     ],
-    "description": "Adds a button to skip (most) opening credits on CrunchyRoll",
+    "description": "Adds a button to skip (most) opening credits on Crunchyroll",
     "manifest_version": 2,
     "name": "CR Skip Intro",
-    "version": "0.1.0"
+    "short_name": "CR Skip Intro",
+    "version": "0.1.1"
 }
